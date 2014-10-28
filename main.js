@@ -10,7 +10,7 @@ requirejs.config({
         }
     }
 });
-        
+
 require(['jquery', 'nbextensions/cite2c/citeproc'], function($, CSL) {
     var cpSys = {
         retrieveLocale: function(lang) {
@@ -24,19 +24,90 @@ require(['jquery', 'nbextensions/cite2c/citeproc'], function($, CSL) {
         }
     };
     
+    var make_citeproc_pairs = function(citns) {
+        return citns.map(function(citn) {
+            return [citn.id, 0];
+        });
+    };
+    
     $.ajax("/nbextensions/cite2c/chicago-fullnote-bibliography.csl", {
         dataType: "text",
         success: function(styleAsText, textStatus, jqXHR) {
             var citeproc = new CSL.Engine(cpSys, styleAsText);
             
-            ids = ["batpol", "allium_vavilovii"];
-            citeproc.updateItems(ids);
+            //ids = ["batpol", "allium_vavilovii"];
+            //citeproc.updateItems(ids);
        
-            bibdata = citeproc.makeBibliography();
-            bibmetadata = bibdata[0];
-            lines = bibdata[1];
-            bibhtml = bibmetadata.bibstart + lines.join('') + bibmetadata.bibend;
-            $('#cite2c-biblio').html(bibhtml);
+            render_biblio = function() {
+                bibdata = citeproc.makeBibliography();
+                bibmetadata = bibdata[0];
+                lines = bibdata[1];
+                bibhtml = bibmetadata.bibstart + lines.join('') + bibmetadata.bibend;
+                $('.cite2c-biblio').html(bibhtml);
+            };
+            
+            IPython.notebook.events.on("rendered.MarkdownCell", function(event, data) {
+                var i=0;
+                
+                var all_cells = IPython.notebook.get_cells()
+                var after_current = false;
+                var citns_before = [];
+                var citns_after = [];
+                for (i=0; i < all_cells.length; i++) {
+                    cell = all_cells[i];
+                    if (cell === data.cell) {
+                        after_current = true;
+                        continue;
+                    }
+                    if (after_current) {
+                        citns_after = citns_after.concat(cell._cite2c_citns || []);
+                    } else {
+                        citns_before = citns_before.concat(cell._cite2c_citns || []);
+                    }
+                }
+                
+                var element = data.cell.element.find('div.text_cell_render');
+                var citn_elements = element.find("[data-cite]");
+                console.log(citn_elements);
+                data.cell._cite2c_citns = [];
+                var newbiblios = element.find(".cite2c-biblio");
+                
+                bibchange = (newbiblios.length > 0);
+                console.log(citn_elements.length);
+                for (i=0; i < citn_elements.length; i++) {
+                    console.log(i);
+                    var citn_element = citn_elements[i];
+                    var id = citn_element.dataset.cite;
+
+                    var citeproc_citn = {citationItems: [{id: id}],
+                                            properties: {noteIndex: 0}
+                                        };
+                    var results = citeproc.processCitationCluster(citeproc_citn, 
+                                            make_citeproc_pairs(citns_before),
+                                            make_citeproc_pairs(citns_after));
+                    console.log(results);
+                    var citn = {id: citeproc_citn.citationID, element: citn_element}
+                    data.cell._cite2c_citns.push(citn);
+                    
+                    
+                    bibchange = bibchange || results[0].bibchange;
+                    var updates = results[1];
+                    var all_citns = citns_before.concat([citn], citns_after);
+                    
+                    for (var j=0; j <  updates.length; j++) {
+                        var idx = updates[j][0];
+                        var newcontent = updates[j][1];
+                        all_citns[idx].element.innerHTML = newcontent;
+                    }
+                    citns_before.push(citn);
+                }
+                
+                // This is false when I would expect it to be true. For now,
+                // just re-render the bibliography every time.
+                //if (bibchange) {
+                    render_biblio();
+                //}
+            }); // end rendered.MarkdownCell handler
         }
     });
 });
