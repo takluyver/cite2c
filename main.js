@@ -16,6 +16,11 @@ define(['jquery',
         'nbextensions/cite2c/citeproc',
         'nbextensions/cite2c/typeahead.jquery'],
 function($, dialog, CSL) {
+    
+    /*
+     * Part 1: Find and render citations using citeproc-js
+     */
+    
     var cpSys = {
         retrieveLocale: function(lang) {
             // Any locale you want, so long as it's en-US
@@ -33,14 +38,7 @@ function($, dialog, CSL) {
             return [citn.id, 0];
         });
     };
-    
-    var store_citation = function(id, citation) {
-        var metadata = IPython.notebook.metadata;
-        if (!metadata.cite2c) metadata.cite2c = {};
-        if (!metadata.cite2c.citations) metadata.cite2c.citations = {};
-        metadata.cite2c.citations[id] = citation;
-    }
-    
+     
     $.ajax("/nbextensions/cite2c/chicago-author-date.csl", {
         dataType: "text",
         success: function(styleAsText, textStatus, jqXHR) {
@@ -84,9 +82,7 @@ function($, dialog, CSL) {
                 var newbiblios = element.find(".cite2c-biblio");
                 
                 bibchange = (newbiblios.length > 0);
-                console.log(citn_elements.length);
                 for (i=0; i < citn_elements.length; i++) {
-                    console.log(i);
                     var citn_element = citn_elements[i];
                     var id = citn_element.dataset.cite;
 
@@ -120,7 +116,48 @@ function($, dialog, CSL) {
         }
     });
     
+    /*
+     * Part 2: Insert citations in the notebook interface, searching Zotero
+     * for data.
+     */
+    
+    var make_author_string = function(authors) {
+        // Make a simple string of the author surnames, to show in the
+        // typeahead dropdown
+        var surname = function(auth) { return auth.family || "?"; }
+        if (!authors)  return "";
+        switch (authors.length) {
+            case 0:
+                return "";
+            case 1:
+                return surname(authors[0]);
+            case 2:
+                return surname(authors[0]) + " & " + surname(authors[1]);
+            default:
+                return surname(authors[0]) + " et al.";
+        }
+    };
+    
+    var store_citation = function(id, citation) {
+        // Store citation data to notebook metadata
+        var metadata = IPython.notebook.metadata;
+        if (!metadata.cite2c) metadata.cite2c = {};
+        if (!metadata.cite2c.citations) metadata.cite2c.citations = {};
+        metadata.cite2c.citations[id] = citation;
+    };
+    
+    var zotero_search = function(query, cb) {
+        // Search Zotero, call cb with an array of CSL JSON citations
+        $.ajax("https://api.zotero.org/users/11141/items?v=3&limit=10&format=csljson&q=" + query, 
+            {
+                accepts: "application/vnd.citationstyles.csl+json",
+                dataType: "json",
+                success: function(data) { cb(data.items); }
+            });
+    }
+    
     function insert_citn() {
+        // Insert citation from dialog
         var cell = IPython.notebook.get_selected_cell();
         
         var entry_box = $('<input type="text"/>');
@@ -129,30 +166,7 @@ function($, dialog, CSL) {
                     .append(entry_box);
         dialog_body.addClass("cite2c-dialog");
 
-        var zotero_search = function(query, cb) {
-            $.ajax("https://api.zotero.org/users/11141/items?v=3&limit=10&format=csljson&q=" + query, 
-                {
-                    accepts: "application/vnd.citationstyles.csl+json",
-                    dataType: "json",
-                    success: function(data) { cb(data.items); }
-                });
-        }
-        
-        var make_author_string = function(authors) {
-            var surname = function(auth) { return auth.family || "?"; }
-            if (!authors)  return "";
-            switch (authors.length) {
-                case 0:
-                    return "";
-                case 1:
-                    return surname(authors[0]);
-                case 2:
-                    return surname(authors[0]) + " & " + surname(authors[1]);
-                default:
-                    return surname(authors[0]) + " et al.";
-            }
-        }
-
+        // Set up typeahead.js to search Zotero
         entry_box.typeahead({
           minLength: 3,
           highlight: true,
@@ -176,6 +190,7 @@ function($, dialog, CSL) {
             entry_box.data("csljson", suggestion);
         });
         
+        // Display dialog
         dialog.modal({
             notebook: IPython.notebook,
             keyboard_manager: IPython.keyboard_manager,
@@ -199,11 +214,13 @@ function($, dialog, CSL) {
     }
     
     var insert_biblio = function() {
+        // Insert HTML tag for bibliography
         var cell = IPython.notebook.get_selected_cell();
         cell.code_mirror.replaceSelection('<div class="cite2c-biblio"></div>');
     }
     
     var citn_button = function () {
+        // Add toolbar buttons to insert citations and bibliographies
         if (!IPython.toolbar) {
             $([IPython.events]).on("app_initialized.NotebookApp", citn_button);
             return;
@@ -226,8 +243,10 @@ function($, dialog, CSL) {
         }
     };
 
-    return {load_ipython_extension: function() {
+    function load_ipython_extension() {
         citn_button();
         $('head').append('<link rel="stylesheet" href="/nbextensions/cite2c/styles.css" type="text/css" />');
-    }};
+    }
+
+    return {load_ipython_extension: load_ipython_extension};
 });
