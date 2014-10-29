@@ -11,7 +11,11 @@ requirejs.config({
     }
 });
 
-require(['jquery', 'nbextensions/cite2c/citeproc'], function($, CSL) {
+define(['jquery',
+        'base/js/dialog',
+        'nbextensions/cite2c/citeproc',
+        'nbextensions/cite2c/typeahead.jquery'],
+function($, dialog, CSL) {
     var cpSys = {
         retrieveLocale: function(lang) {
             // Any locale you want, so long as it's en-US
@@ -30,7 +34,14 @@ require(['jquery', 'nbextensions/cite2c/citeproc'], function($, CSL) {
         });
     };
     
-    $.ajax("/nbextensions/cite2c/chicago-fullnote-bibliography.csl", {
+    var store_citation = function(id, citation) {
+        var metadata = IPython.notebook.metadata;
+        if (!metadata.cite2c) metadata.cite2c = {};
+        if (!metadata.cite2c.citations) metadata.cite2c.citations = {};
+        metadata.cite2c.citations[id] = citation;
+    }
+    
+    $.ajax("/nbextensions/cite2c/chicago-author-date.csl", {
         dataType: "text",
         success: function(styleAsText, textStatus, jqXHR) {
             var citeproc = new CSL.Engine(cpSys, styleAsText);
@@ -85,10 +96,8 @@ require(['jquery', 'nbextensions/cite2c/citeproc'], function($, CSL) {
                     var results = citeproc.processCitationCluster(citeproc_citn, 
                                             make_citeproc_pairs(citns_before),
                                             make_citeproc_pairs(citns_after));
-                    console.log(results);
                     var citn = {id: citeproc_citn.citationID, element: citn_element}
                     data.cell._cite2c_citns.push(citn);
-                    
                     
                     bibchange = bibchange || results[0].bibchange;
                     var updates = results[1];
@@ -110,4 +119,104 @@ require(['jquery', 'nbextensions/cite2c/citeproc'], function($, CSL) {
             }); // end rendered.MarkdownCell handler
         }
     });
+    
+    function insert_citn() {
+        var cell = IPython.notebook.get_selected_cell();
+        
+        var entry_box = $('<input type="text"/>');
+        var dialog_body = $("<div/>")
+                    .append($("<p/>").text("Start typing below to search Zotero"))
+                    .append(entry_box);
+        dialog_body.addClass("cite2c-dialog");
+
+        var zotero_search = function(query, cb) {
+            $.ajax("https://api.zotero.org/users/11141/items?v=3&limit=10&format=csljson&q=" + query, 
+                {
+                    accepts: "application/vnd.citationstyles.csl+json",
+                    dataType: "json",
+                    success: function(data) { cb(data.items); }
+                });
+        }
+        
+        var make_author_string = function(authors) {
+            var surname = function(auth) { return auth.family || "?"; }
+            if (!authors)  return "";
+            switch (authors.length) {
+                case 0:
+                    return "";
+                case 1:
+                    return surname(authors[0]);
+                case 2:
+                    return surname(authors[0]) + " & " + surname(authors[1]);
+                default:
+                    return surname(authors[0]) + " et al.";
+            }
+        }
+
+        entry_box.typeahead({
+          minLength: 3,
+          highlight: true,
+        },
+        {
+          name: 'zotero',
+          source: zotero_search,
+          displayKey: function(value) { return value.title || "Mystery item with no title"; },
+          templates: {
+              empty: "No matches",
+              suggestion: function(value) {
+                  //console.log(value);
+                  return "<div>"+value.title+"</div>"
+                    + '<div style="float: right; color: #888;">' + (value.type || "?") + "</div>"
+                    + "<div><i>"+ make_author_string(value.author) + "</i></div>";
+              }
+          }
+        });
+        
+        entry_box.on('typeahead:selected', function(ev, suggestion, dataset) {
+            entry_box.data("csljson", suggestion);
+        });
+        
+        dialog.modal({
+            notebook: IPython.notebook,
+            keyboard_manager: IPython.keyboard_manager,
+            title : "Insert citation",
+            body : dialog_body,
+            buttons : {
+                "Cancel" : {},
+                "Insert" : {
+                    "class" : "btn-primary",
+                    "click" : function() {
+                        var citation = entry_box.data("csljson")
+                        var id = citation.id
+                        delete citation['id']
+                        store_citation(id, citation);
+                        var citn_html = '<cite data-cite="' + id + '"></cite>';
+                        cell.set_text(cell.get_pre_cursor() + citn_html + cell.get_post_cursor());
+                    }
+                }
+            }
+        });
+    }
+    
+    var citn_button = function () {
+        if (!IPython.toolbar) {
+            $([IPython.events]).on("app_initialized.NotebookApp", citn_button);
+            return;
+        }
+        if ($("#toc_button").length === 0) {
+            IPython.toolbar.add_buttons_group([
+                {
+                  'label' : 'Insert citation',
+                  'icon' : 'fa-mortar-board',
+                  'callback': insert_citn,
+                  'id' : 'insert_citn_button'
+                },
+            ]);
+        }
+    };
+
+    return {load_ipython_extension: function() {
+        citn_button();
+        $('head').append('<link rel="stylesheet" href="/nbextensions/cite2c/styles.css" type="text/css" />');
+    }};
 });
