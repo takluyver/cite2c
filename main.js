@@ -191,11 +191,16 @@ function($, dialog, CSL) {
                         delete citation['id']
                         store_citation(id, citation);
                         var citn_html = '<cite data-cite="' + id + '"></cite>';
-                        cell.set_text(cell.get_pre_cursor() + citn_html + cell.get_post_cursor());
+                        cell.code_mirror.replaceSelection(citn_html);
                     }
                 }
             }
         });
+    }
+    
+    var insert_biblio = function() {
+        var cell = IPython.notebook.get_selected_cell();
+        cell.code_mirror.replaceSelection('<div class="cite2c-biblio"></div>');
     }
     
     var citn_button = function () {
@@ -211,6 +216,12 @@ function($, dialog, CSL) {
                   'callback': insert_citn,
                   'id' : 'insert_citn_button'
                 },
+                {
+                  label: 'Insert bibliography',
+                  icon: 'fa-list',
+                  callback: insert_biblio,
+                  id: 'insert_biblio_button'
+                }
             ]);
         }
     };
