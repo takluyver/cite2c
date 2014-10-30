@@ -62,6 +62,7 @@ function($, dialog, CSL) {
             function process_cell_citations(cell) {
                 var i=0;
                 
+                // Gather citations before and after the current cell
                 var all_cells = IPython.notebook.get_cells();
                 var after_current = false;
                 var citns_before = [];
