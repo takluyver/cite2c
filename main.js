@@ -48,14 +48,17 @@ function($, dialog, CSL) {
             //citeproc.updateItems(ids);
        
             render_biblio = function() {
-                bibdata = citeproc.makeBibliography();
-                bibmetadata = bibdata[0];
-                lines = bibdata[1];
-                bibhtml = bibmetadata.bibstart + lines.join('') + bibmetadata.bibend;
-                $('.cite2c-biblio').html(bibhtml);
+                var biblio_targets = $('.cite2c-biblio');
+                if (biblio_targets.length == 0) {
+                    return;
+                }
+                var bibdata = citeproc.makeBibliography();
+                var bibmetadata = bibdata[0];
+                var bibhtml = bibmetadata.bibstart + bibdata[1].join('') + bibmetadata.bibend;
+                biblio_targets.html(bibhtml);
             };
             
-            IPython.notebook.events.on("rendered.MarkdownCell", function(event, data) {
+            function process_cell_citations(cell) {
                 var i=0;
                 
                 var all_cells = IPython.notebook.get_cells()
@@ -63,22 +66,20 @@ function($, dialog, CSL) {
                 var citns_before = [];
                 var citns_after = [];
                 for (i=0; i < all_cells.length; i++) {
-                    cell = all_cells[i];
-                    if (cell === data.cell) {
+                    if (all_cells[i] === cell) {
                         after_current = true;
                         continue;
                     }
                     if (after_current) {
-                        citns_after = citns_after.concat(cell._cite2c_citns || []);
+                        citns_after = citns_after.concat(all_cells[i]._cite2c_citns || []);
                     } else {
-                        citns_before = citns_before.concat(cell._cite2c_citns || []);
+                        citns_before = citns_before.concat(all_cells[i]._cite2c_citns || []);
                     }
                 }
                 
-                var element = data.cell.element.find('div.text_cell_render');
+                var element = cell.element.find('div.text_cell_render');
                 var citn_elements = element.find("[data-cite]");
-                console.log(citn_elements);
-                data.cell._cite2c_citns = [];
+                cell._cite2c_citns = [];
                 var newbiblios = element.find(".cite2c-biblio");
                 
                 bibchange = (newbiblios.length > 0);
@@ -93,7 +94,7 @@ function($, dialog, CSL) {
                                             make_citeproc_pairs(citns_before),
                                             make_citeproc_pairs(citns_after));
                     var citn = {id: citeproc_citn.citationID, element: citn_element}
-                    data.cell._cite2c_citns.push(citn);
+                    cell._cite2c_citns.push(citn);
                     
                     bibchange = bibchange || results[0].bibchange;
                     var updates = results[1];
@@ -112,7 +113,28 @@ function($, dialog, CSL) {
                 //if (bibchange) {
                     render_biblio();
                 //}
-            }); // end rendered.MarkdownCell handler
+            } // end process_cell_citations
+            
+            IPython.notebook.events.on("rendered.MarkdownCell", function(event, data) {
+                process_cell_citations(data.cell);
+            });
+            
+            function reprocess_all() {
+                var all_cells = IPython.notebook.get_cells()
+                var i = 0;
+                for (i = 0; i < all_cells.length; i++) {
+                    delete all_cells[i]._cite2c_citns;
+                }
+                for (i = 0; i < all_cells.length; i++) {
+                    var cell = all_cells[i];
+                    if (cell.cell_type === "markdown") {
+                        process_cell_citations(cell);
+                    }
+                }
+            }
+            
+            // Process all citations on load
+            reprocess_all();
         }
     });
     
