@@ -226,6 +226,7 @@ function($, dialog, CSL) {
             keyboard_manager: IPython.keyboard_manager,
             title : "Insert citation",
             body : dialog_body,
+            open: function() {entry_box.focus();},
             buttons : {
                 "Cancel" : {},
                 "Insert" : {
