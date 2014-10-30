@@ -168,25 +168,32 @@ function($, dialog, CSL) {
         metadata.cite2c.citations[id] = citation;
     };
     
-    var zotero_search = function(query, cb) {
-        // Search Zotero, call cb with an array of CSL JSON citations
-        $.ajax("https://api.zotero.org/users/11141/items?v=3&limit=10&format=csljson&q=" + query, 
-            {
-                accepts: "application/vnd.citationstyles.csl+json",
-                dataType: "json",
-                success: function(data) { cb(data.items); }
-            });
-    }
-    
     function insert_citn() {
         // Insert citation from dialog
         var cell = IPython.notebook.get_selected_cell();
         
         var entry_box = $('<input type="text"/>');
+        var spinner = $('<span class="fa fa-spinner fa-spin"/>');
+        spinner.hide();
         var dialog_body = $("<div/>")
                     .append($("<p/>").text("Start typing below to search Zotero"))
-                    .append(entry_box);
+                    .append(entry_box)
+                    .append(spinner);
         dialog_body.addClass("cite2c-dialog");
+        
+        var zotero_search = function(query, cb) {
+            // Search Zotero, call cb with an array of CSL JSON citations
+            spinner.show();
+            $.ajax("https://api.zotero.org/users/11141/items?v=3&limit=10&format=csljson&q=" + query, 
+                {
+                    accepts: "application/vnd.citationstyles.csl+json",
+                    dataType: "json",
+                    success: function(data) {
+                        spinner.hide();
+                        cb(data.items);
+                    }
+                });
+        }
 
         // Set up typeahead.js to search Zotero
         entry_box.typeahead({
