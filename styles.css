@@ -1,0 +1,27 @@
+
+.cite2c-dialog .twitter-typeahead {
+    width: 90%;
+    margin: 8px;
+}
+
+.cite2c-dialog .tt-input {
+    width: 100%;
+}
+
+.cite2c-dialog .tt-dropdown-menu {
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.cite2c-dialog .tt-suggestion {
+    padding: 4px;
+}
+
+.cite2c-dialog .tt-suggestion.tt-cursor {
+    background-color: #eee;
+}
+
+.csl-entry {
+    padding: 0.4em 0;
+}
