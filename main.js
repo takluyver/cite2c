@@ -16,6 +16,7 @@ define(['jquery',
         'nbextensions/cite2c/citeproc',
         'nbextensions/cite2c/typeahead.jquery'],
 function($, dialog, CSL) {
+    "use strict";
     
     /*
      * Part 1: Find and render citations using citeproc-js
@@ -47,21 +48,21 @@ function($, dialog, CSL) {
             //ids = ["batpol", "allium_vavilovii"];
             //citeproc.updateItems(ids);
        
-            render_biblio = function() {
+            function render_biblio() {
                 var biblio_targets = $('.cite2c-biblio');
-                if (biblio_targets.length == 0) {
+                if (biblio_targets.length === 0) {
                     return;
                 }
                 var bibdata = citeproc.makeBibliography();
                 var bibmetadata = bibdata[0];
                 var bibhtml = bibmetadata.bibstart + bibdata[1].join('') + bibmetadata.bibend;
                 biblio_targets.html(bibhtml);
-            };
-            
+            }
+
             function process_cell_citations(cell) {
                 var i=0;
                 
-                var all_cells = IPython.notebook.get_cells()
+                var all_cells = IPython.notebook.get_cells();
                 var after_current = false;
                 var citns_before = [];
                 var citns_after = [];
@@ -82,7 +83,7 @@ function($, dialog, CSL) {
                 cell._cite2c_citns = [];
                 var newbiblios = element.find(".cite2c-biblio");
                 
-                bibchange = (newbiblios.length > 0);
+                var bibchange = (newbiblios.length > 0);
                 for (i=0; i < citn_elements.length; i++) {
                     var citn_element = citn_elements[i];
                     var id = citn_element.dataset.cite;
@@ -93,7 +94,7 @@ function($, dialog, CSL) {
                     var results = citeproc.processCitationCluster(citeproc_citn, 
                                             make_citeproc_pairs(citns_before),
                                             make_citeproc_pairs(citns_after));
-                    var citn = {id: citeproc_citn.citationID, element: citn_element}
+                    var citn = {id: citeproc_citn.citationID, element: citn_element};
                     cell._cite2c_citns.push(citn);
                     
                     bibchange = bibchange || results[0].bibchange;
@@ -120,7 +121,7 @@ function($, dialog, CSL) {
             });
             
             function reprocess_all() {
-                var all_cells = IPython.notebook.get_cells()
+                var all_cells = IPython.notebook.get_cells();
                 var i = 0;
                 for (i = 0; i < all_cells.length; i++) {
                     delete all_cells[i]._cite2c_citns;
@@ -146,7 +147,7 @@ function($, dialog, CSL) {
     var make_author_string = function(authors) {
         // Make a simple string of the author surnames, to show in the
         // typeahead dropdown
-        var surname = function(auth) { return auth.family || "?"; }
+        var surname = function(auth) { return auth.family || "?"; };
         if (!authors)  return "";
         switch (authors.length) {
             case 0:
@@ -193,7 +194,7 @@ function($, dialog, CSL) {
                         cb(data.items);
                     }
                 });
-        }
+        };
 
         // Set up typeahead.js to search Zotero
         entry_box.typeahead({
@@ -208,9 +209,9 @@ function($, dialog, CSL) {
               empty: "No matches",
               suggestion: function(value) {
                   //console.log(value);
-                  return "<div>"+value.title+"</div>"
-                    + '<div style="float: right; color: #888;">' + (value.type || "?") + "</div>"
-                    + "<div><i>"+ make_author_string(value.author) + "</i></div>";
+                  return "<div>"+value.title+"</div>" +
+                    '<div style="float: right; color: #888;">' + (value.type || "?") + "</div>" +
+                    "<div><i>"+ make_author_string(value.author) + "</i></div>";
               }
           }
         });
@@ -230,9 +231,9 @@ function($, dialog, CSL) {
                 "Insert" : {
                     "class" : "btn-primary",
                     "click" : function() {
-                        var citation = entry_box.data("csljson")
-                        var id = citation.id
-                        delete citation['id']
+                        var citation = entry_box.data("csljson");
+                        var id = citation.id;
+                        delete citation.id;
                         store_citation(id, citation);
                         var citn_html = '<cite data-cite="' + id + '"></cite>';
                         cell.code_mirror.replaceSelection(citn_html);
@@ -246,7 +247,7 @@ function($, dialog, CSL) {
         // Insert HTML tag for bibliography
         var cell = IPython.notebook.get_selected_cell();
         cell.code_mirror.replaceSelection('<div class="cite2c-biblio"></div>');
-    }
+    };
     
     var citn_button = function () {
         // Add toolbar buttons to insert citations and bibliographies
