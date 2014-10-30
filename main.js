@@ -200,6 +200,7 @@ function($, dialog, CSL) {
         // Set up typeahead.js to search Zotero
         entry_box.typeahead({
           minLength: 3,
+          hint: false,
           highlight: true,
         },
         {
