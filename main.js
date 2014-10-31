@@ -7,6 +7,10 @@ requirejs.config({
         'nbextensions/cite2c/citeproc': {
             deps: ['nbextensions/cite2c/xmldom'],
             exports: "CSL"
+        },
+        'nbextensions/cite2c/typeahead.bundle.min': {
+            deps: ['jquery'],
+            exports: "Bloodhound"  // Doesn't actually work, because of the shenanigans typeahead does
         }
     }
 });
@@ -14,7 +18,8 @@ requirejs.config({
 define(['jquery',
         'base/js/dialog',
         'nbextensions/cite2c/citeproc',
-        'nbextensions/cite2c/typeahead.jquery'],
+        'nbextensions/cite2c/typeahead.bundle.min',
+       ],
 function($, dialog, CSL) {
     "use strict";
     
@@ -170,32 +175,59 @@ function($, dialog, CSL) {
         metadata.cite2c.citations[id] = citation;
     };
     
+    var csl_tokenize = function(item) {
+        var tokens = [];
+        function add_splitted(str) {
+            if (str) tokens = tokens.concat(item.title.split(/\s+/));
+        }
+        
+        add_splitted(item.title);
+
+        if (item.author) {
+            for (var i=0; i < item.author.length; i++) {
+                add_splitted(item.author[i].family);
+                add_splitted(item.author[i].literal);
+            }
+        }
+        
+        if (item.issued && item.issued['date-parts']) {
+            add_splitted(item.issued['date-parts'][0])
+        }
+        return tokens;
+    };
+    
+    var get_metadata_items = function() {
+        var items = (IPython.notebook.metadata.cite2c || {}).citations || {};
+        return $.map(items, function(obj, id) {return obj;});
+    }
+
+    var zot_bh_engine = new Bloodhound({
+        name: 'zotero',
+        datumTokenizer: csl_tokenize,
+        queryTokenizer: Bloodhound.tokenizers.whitespace,
+        limit: 10,
+        dupDetector: function(remoteMatch, localMatch) { return remoteMatch.id === localMatch.id; },
+        //local: get_metadata_items,
+        remote: {
+            url: "https://api.zotero.org/users/11141/items?v=3&limit=10&format=csljson&q=%QUERY",
+            filter: function(result) { return result.items; },
+            ajax: {
+                accepts: "application/vnd.citationstyles.csl+json",
+                dataType: "json"
+            }
+        }
+    });
+    zot_bh_engine.initialize();
+    
     function insert_citn() {
         // Insert citation from dialog
         var cell = IPython.notebook.get_selected_cell();
         
         var entry_box = $('<input type="text"/>');
-        var spinner = $('<span class="fa fa-spinner fa-spin"/>');
-        spinner.hide();
         var dialog_body = $("<div/>")
                     .append($("<p/>").text("Start typing below to search Zotero"))
                     .append(entry_box)
-                    .append(spinner);
         dialog_body.addClass("cite2c-dialog");
-        
-        var zotero_search = function(query, cb) {
-            // Search Zotero, call cb with an array of CSL JSON citations
-            spinner.show();
-            $.ajax("https://api.zotero.org/users/11141/items?v=3&limit=10&format=csljson&q=" + query, 
-                {
-                    accepts: "application/vnd.citationstyles.csl+json",
-                    dataType: "json",
-                    success: function(data) {
-                        spinner.hide();
-                        cb(data.items);
-                    }
-                });
-        };
 
         // Set up typeahead.js to search Zotero
         entry_box.typeahead({
@@ -205,7 +237,7 @@ function($, dialog, CSL) {
         },
         {
           name: 'zotero',
-          source: zotero_search,
+          source: zot_bh_engine.ttAdapter(),
           displayKey: function(value) { return value.title || "Mystery item with no title"; },
           templates: {
               empty: "No matches",
