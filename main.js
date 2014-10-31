@@ -177,8 +177,8 @@ function($, dialog, CSL) {
     
     var csl_tokenize = function(item) {
         var tokens = [];
-        function add_splitted(str) {
-            if (str) tokens = tokens.concat(item.title.split(/\s+/));
+        function add_splitted(value) {
+            if (value) tokens = tokens.concat(value.toString().split(/\s+/));
         }
         
         add_splitted(item.title);
@@ -190,15 +190,17 @@ function($, dialog, CSL) {
             }
         }
         
-        if (item.issued && item.issued['date-parts']) {
-            add_splitted(item.issued['date-parts'][0])
+        if (item.issued) {
+            if (item.issued['date-parts'])
+                add_splitted(item.issued['date-parts'][0]);
+            add_splitted(item.issued.year);
         }
         return tokens;
     };
     
     var get_metadata_items = function() {
         var items = (IPython.notebook.metadata.cite2c || {}).citations || {};
-        return $.map(items, function(obj, id) {return obj;});
+        return $.map(items, function(obj, id) {return obj;});  // Flatten to array
     }
 
     var zot_bh_engine = new Bloodhound({
@@ -207,7 +209,7 @@ function($, dialog, CSL) {
         queryTokenizer: Bloodhound.tokenizers.whitespace,
         limit: 10,
         dupDetector: function(remoteMatch, localMatch) { return remoteMatch.id === localMatch.id; },
-        //local: get_metadata_items,
+        local: get_metadata_items,
         remote: {
             url: "https://api.zotero.org/users/11141/items?v=3&limit=10&format=csljson&q=%QUERY",
             filter: function(result) { return result.items; },
