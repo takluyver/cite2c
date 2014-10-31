@@ -194,7 +194,7 @@ function($, dialog, CSL) {
     var get_metadata_items = function() {
         var items = (IPython.notebook.metadata.cite2c || {}).citations || {};
         return $.map(items, function(obj, id) {return obj;});  // Flatten to array
-    }
+    };
 
     var zot_bh_engine = new Bloodhound({
         name: 'zotero',
@@ -232,7 +232,7 @@ function($, dialog, CSL) {
         var entry_box = $('<input type="text"/>');
         var dialog_body = $("<div/>")
                     .append($("<p/>").text("Start typing below to search Zotero"))
-                    .append(entry_box)
+                    .append(entry_box);
         dialog_body.addClass("cite2c-dialog");
 
         // Set up typeahead.js to search Zotero
