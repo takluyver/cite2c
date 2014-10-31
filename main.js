@@ -167,13 +167,6 @@ function($, dialog, CSL) {
         }
     };
     
-    var store_citation = function(id, citation) {
-        // Store citation data to notebook metadata
-        var metadata = IPython.notebook.metadata;
-        if (!metadata.cite2c) metadata.cite2c = {};
-        if (!metadata.cite2c.citations) metadata.cite2c.citations = {};
-        metadata.cite2c.citations[id] = citation;
-    };
     
     var csl_tokenize = function(item) {
         var tokens = [];
@@ -220,6 +213,17 @@ function($, dialog, CSL) {
         }
     });
     zot_bh_engine.initialize();
+    
+    var store_citation = function(id, citation) {
+        // Store citation data to notebook metadata & BH search index
+        var metadata = IPython.notebook.metadata;
+        if (!metadata.cite2c) metadata.cite2c = {};
+        if (!metadata.cite2c.citations) metadata.cite2c.citations = {};
+        if (!(id in metadata.cite2c.citations)) {
+            metadata.cite2c.citations[id] = citation;
+            zot_bh_engine.add(citation);
+        }
+    };
     
     function insert_citn() {
         // Insert citation from dialog
