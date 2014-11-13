@@ -17,10 +17,12 @@ requirejs.config({
 
 define(['jquery',
         'base/js/dialog',
+        'base/js/utils',
+        'services/config',
         'nbextensions/cite2c/citeproc',
         'nbextensions/cite2c/typeahead.bundle.min',
        ],
-function($, dialog, CSL) {
+function($, dialog, utils, configmod, CSL) {
     "use strict";
     
     /*
@@ -192,24 +194,82 @@ function($, dialog, CSL) {
         var items = (IPython.notebook.metadata.cite2c || {}).citations || {};
         return $.map(items, function(obj, id) {return obj;});  // Flatten to array
     };
-
-    var zot_bh_engine = new Bloodhound({
-        name: 'zotero',
-        datumTokenizer: csl_tokenize,
-        queryTokenizer: Bloodhound.tokenizers.whitespace,
-        limit: 10,
-        dupDetector: function(remoteMatch, localMatch) { return remoteMatch.id === localMatch.id; },
-        local: get_metadata_items,
-        remote: {
-            url: "https://api.zotero.org/users/11141/items?v=3&limit=10&format=csljson&q=%QUERY",
-            filter: function(result) { return result.items; },
-            ajax: {
-                accepts: "application/vnd.citationstyles.csl+json",
-                dataType: "json"
+    
+    var config = configmod.ConfigSection('cite2c',
+                                    {base_url: utils.get_body_data("baseUrl")});
+    config.load();
+    
+    function get_zotero_user_id() {
+        return config.loaded.then(function() {
+            var zid = (config.data.zotero || {}).user_id;
+            if (zid) {
+                return zid;
             }
+            
+            var entry_box;
+            dialog_body = $("<div/>").append("<p>Please enter your Zotero userID. " +
+                "This is not your username; you can find it by going to " +
+                '<a href="https://www.zotero.org/settings/keys">this page</a> ' +
+                "and logging into Zotero.</p>")
+                .append("<p>You will only need to do this once.</p>")
+                .append($("<div/>").append("userID:").append(entry_box));
+            
+            return new Promise(function(resolve, reject) {
+                dialog.modal({
+                    notebook: IPython.notebook,
+                    keyboard_manager: IPython.keyboard_manager,
+                    title : "",
+                    body : dialog_body,
+                    open: function() {entry_box.focus();},
+                    buttons : {
+                        "Cancel" : {
+                            click : function() { reject("Dialog cancelled"); },
+                        },
+                        "OK" : {
+                            class : "btn-primary",
+                            click : function() { resolve(entry_box.val()); }
+                        }
+                    }
+                });
+            });
+        });
+    }
+    
+    var zot_bh_engine;
+    
+    function get_zot_bh_engine() {
+        if (zot_bh_engine) {
+            return new Promise(function(resolve, reject) {
+                zot_bh_engine.intialize()
+                    .done(function() { resolve(zot_bh_engine); })
+                    .fail(reject);
+            });
         }
-    });
-    zot_bh_engine.initialize();
+        
+        return get_zotero_user_id().then(function(user_id) {
+            zot_bh_engine = new Bloodhound({
+                name: 'zotero',
+                datumTokenizer: csl_tokenize,
+                queryTokenizer: Bloodhound.tokenizers.whitespace,
+                limit: 10,
+                dupDetector: function(remoteMatch, localMatch) { return remoteMatch.id === localMatch.id; },
+                local: get_metadata_items,
+                remote: {
+                    url: "https://api.zotero.org/users/"+user_id+"/items?v=3&limit=10&format=csljson&q=%QUERY",
+                    filter: function(result) { return result.items; },
+                    ajax: {
+                        accepts: "application/vnd.citationstyles.csl+json",
+                        dataType: "json"
+                    }
+                }
+            });
+            return new Promise(function(resolve, reject) {
+                zot_bh_engine.intialize()
+                    .done(function() { resolve(zot_bh_engine); })
+                    .fail(reject);
+            });
+        });
+    }
     
     var store_citation = function(id, citation) {
         // Store citation data to notebook metadata & BH search index
@@ -232,52 +292,54 @@ function($, dialog, CSL) {
                     .append(entry_box);
         dialog_body.addClass("cite2c-dialog");
 
-        // Set up typeahead.js to search Zotero
-        entry_box.typeahead({
-          minLength: 3,
-          hint: false,
-          highlight: true,
-        },
-        {
-          name: 'zotero',
-          source: zot_bh_engine.ttAdapter(),
-          displayKey: function(value) { return value.title || "Mystery item with no title"; },
-          templates: {
-              empty: "No matches",
-              suggestion: function(value) {
-                  //console.log(value);
-                  return "<div>"+value.title+"</div>" +
-                    '<div style="float: right; color: #888;">' + (value.type || "?") + "</div>" +
-                    "<div><i>"+ make_author_string(value.author) + "</i></div>";
+        get_zot_bh_engine().then(function(zot_bh_engine) {
+            // Set up typeahead.js to search Zotero
+            entry_box.typeahead({
+              minLength: 3,
+              hint: false,
+              highlight: true,
+            },
+            {
+              name: 'zotero',
+              source: zot_bh_engine.ttAdapter(),
+              displayKey: function(value) { return value.title || "Mystery item with no title"; },
+              templates: {
+                  empty: "No matches",
+                  suggestion: function(value) {
+                      //console.log(value);
+                      return "<div>"+value.title+"</div>" +
+                        '<div style="float: right; color: #888;">' + (value.type || "?") + "</div>" +
+                        "<div><i>"+ make_author_string(value.author) + "</i></div>";
+                  }
               }
-          }
-        });
-        
-        entry_box.on('typeahead:selected', function(ev, suggestion, dataset) {
-            entry_box.data("csljson", suggestion);
-        });
-        
-        // Display dialog
-        dialog.modal({
-            notebook: IPython.notebook,
-            keyboard_manager: IPython.keyboard_manager,
-            title : "Insert citation",
-            body : dialog_body,
-            open: function() {entry_box.focus();},
-            buttons : {
-                "Cancel" : {},
-                "Insert" : {
-                    "class" : "btn-primary",
-                    "click" : function() {
-                        var citation = entry_box.data("csljson");
-                        var id = citation.id;
-                        delete citation.id;
-                        store_citation(id, citation);
-                        var citn_html = '<cite data-cite="' + id + '"></cite>';
-                        cell.code_mirror.replaceSelection(citn_html);
+            });
+            
+            entry_box.on('typeahead:selected', function(ev, suggestion, dataset) {
+                entry_box.data("csljson", suggestion);
+            });
+            
+            // Display dialog
+            dialog.modal({
+                notebook: IPython.notebook,
+                keyboard_manager: IPython.keyboard_manager,
+                title : "Insert citation",
+                body : dialog_body,
+                open: function() {entry_box.focus();},
+                buttons : {
+                    "Cancel" : {},
+                    "Insert" : {
+                        "class" : "btn-primary",
+                        "click" : function() {
+                            var citation = entry_box.data("csljson");
+                            var id = citation.id;
+                            delete citation.id;
+                            store_citation(id, citation);
+                            var citn_html = '<cite data-cite="' + id + '"></cite>';
+                            cell.code_mirror.replaceSelection(citn_html);
+                        }
                     }
                 }
-            }
+            });
         });
     }
     
