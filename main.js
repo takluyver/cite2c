@@ -49,10 +49,7 @@ function($, dialog, CSL) {
         dataType: "text",
         success: function(styleAsText, textStatus, jqXHR) {
             var citeproc = new CSL.Engine(cpSys, styleAsText);
-            
-            //ids = ["batpol", "allium_vavilovii"];
-            //citeproc.updateItems(ids);
-       
+
             function render_biblio() {
                 var biblio_targets = $('.cite2c-biblio');
                 if (biblio_targets.length === 0) {
