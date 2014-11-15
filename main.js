@@ -195,7 +195,7 @@ function($, dialog, utils, configmod, CSL) {
         return $.map(items, function(obj, id) {return obj;});  // Flatten to array
     };
     
-    var config = configmod.ConfigSection('cite2c',
+    var config = new configmod.ConfigSection('cite2c',
                                     {base_url: utils.get_body_data("baseUrl")});
     config.load();
     
@@ -206,19 +206,20 @@ function($, dialog, utils, configmod, CSL) {
                 return zid;
             }
             
-            var entry_box;
-            dialog_body = $("<div/>").append("<p>Please enter your Zotero userID. " +
+            var entry_box = $('<input type="text"/>');
+            var dialog_body = $("<div/>").append("<p>Please enter your Zotero userID. " +
                 "This is not your username; you can find it by going to " +
                 '<a href="https://www.zotero.org/settings/keys">this page</a> ' +
-                "and logging into Zotero.</p>")
-                .append("<p>You will only need to do this once.</p>")
-                .append($("<div/>").append("userID:").append(entry_box));
+                "and logging into Zotero. You will only need to do this once.")
+                .append("<br/>")
+                .append($("<div/>").append("userID: ").append(entry_box));
             
             return new Promise(function(resolve, reject) {
+                var zuid;
                 dialog.modal({
                     notebook: IPython.notebook,
                     keyboard_manager: IPython.keyboard_manager,
-                    title : "",
+                    title : "Zotero User ID",
                     body : dialog_body,
                     open: function() {entry_box.focus();},
                     buttons : {
@@ -227,8 +228,21 @@ function($, dialog, utils, configmod, CSL) {
                         },
                         "OK" : {
                             class : "btn-primary",
-                            click : function() { resolve(entry_box.val()); }
+                            click : function() { zuid = entry_box.val(); }
                         }
+                    }
+                }).on("hidden.bs.modal", function () {
+                    // Sigh. Because this ends up showing another dialog, if we
+                    // do it in the click handler, there's a race condition with
+                    // enabling/disabling the notebook keyboard shortcuts, which
+                    // leads to the shortcuts being active while the second
+                    // dialog is open. Waiting for this hidden event and doing
+                    // setTimeout should be enough to avoid the race.
+                    if (zuid) {
+                        setTimeout(function() {
+                            config.update({zotero: {user_id: zuid}});
+                            resolve(zuid);
+                        }, 0);
                     }
                 });
             });
