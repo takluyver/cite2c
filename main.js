@@ -240,7 +240,7 @@ function($, dialog, utils, configmod, CSL) {
     function get_zot_bh_engine() {
         if (zot_bh_engine) {
             return new Promise(function(resolve, reject) {
-                zot_bh_engine.intialize()
+                zot_bh_engine.initialize()
                     .done(function() { resolve(zot_bh_engine); })
                     .fail(reject);
             });
@@ -264,7 +264,7 @@ function($, dialog, utils, configmod, CSL) {
                 }
             });
             return new Promise(function(resolve, reject) {
-                zot_bh_engine.intialize()
+                zot_bh_engine.initialize()
                     .done(function() { resolve(zot_bh_engine); })
                     .fail(reject);
             });
