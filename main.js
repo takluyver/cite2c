@@ -18,11 +18,12 @@ requirejs.config({
 define(['jquery',
         'base/js/dialog',
         'base/js/utils',
+        'base/js/keyboard',
         'services/config',
         'nbextensions/cite2c/citeproc',
         'nbextensions/cite2c/typeahead.bundle.min',
        ],
-function($, dialog, utils, configmod, CSL) {
+function($, dialog, utils, keyboard, configmod, CSL) {
     "use strict";
     
     /*
@@ -209,10 +210,10 @@ function($, dialog, utils, configmod, CSL) {
             var entry_box = $('<input type="text"/>');
             var dialog_body = $("<div/>").append("<p>Please enter your Zotero userID. " +
                 "This is not your username; you can find it by going to " +
-                '<a href="https://www.zotero.org/settings/keys">this page</a> ' +
+                '<a href="https://www.zotero.org/settings/keys" target="_blank">this page</a> ' +
                 "and logging into Zotero. You will only need to do this once.")
                 .append("<br/>")
-                .append($("<div/>").append("userID: ").append(entry_box));
+                .append($("<form/>").append("userID: ").append(entry_box));
             
             return new Promise(function(resolve, reject) {
                 var zuid;
@@ -221,7 +222,14 @@ function($, dialog, utils, configmod, CSL) {
                     keyboard_manager: IPython.keyboard_manager,
                     title : "Zotero User ID",
                     body : dialog_body,
-                    open: function() {entry_box.focus();},
+                    open: function() {
+                        var that = $(this);
+                        that.find('form').submit(function () {
+                            that.find('.btn-primary').first().click();
+                            return false;
+                        });
+                        entry_box.focus();
+                    },
                     buttons : {
                         "Cancel" : {
                             click : function() { reject("Dialog cancelled"); },
@@ -303,7 +311,7 @@ function($, dialog, utils, configmod, CSL) {
         var entry_box = $('<input type="text"/>');
         var dialog_body = $("<div/>")
                     .append($("<p/>").text("Start typing below to search Zotero"))
-                    .append(entry_box);
+                    .append($('<form/>').append(entry_box));
         dialog_body.addClass("cite2c-dialog");
 
         get_zot_bh_engine().then(function(zot_bh_engine) {
@@ -338,13 +346,21 @@ function($, dialog, utils, configmod, CSL) {
                 keyboard_manager: IPython.keyboard_manager,
                 title : "Insert citation",
                 body : dialog_body,
-                open: function() {entry_box.focus();},
+                open: function() {
+                    var that = $(this);
+                    that.find('form').submit(function () {
+                        that.find('.btn-primary').first().click();
+                        return false;
+                    });
+                    entry_box.focus();
+                },
                 buttons : {
                     "Cancel" : {},
                     "Insert" : {
                         "class" : "btn-primary",
                         "click" : function() {
                             var citation = entry_box.data("csljson");
+                            if (!citation) {return;}
                             var id = citation.id;
                             delete citation.id;
                             store_citation(id, citation);
