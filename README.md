@@ -2,7 +2,7 @@ Live citations in IPython notebooks
 
 ![screenshot](search_screenshot.png)
 
-To use it, symlink this directory to `~/.ipython/nbextensions/cite2c`, and add to your custom.js:
+To use it, symlink the cite2c subdirectory into `~/.ipython/nbextensions`, and add to your custom.js:
 
 ```javascript
 IPython.load_extensions('cite2c/main');
