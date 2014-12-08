@@ -2,11 +2,8 @@ Live citations in IPython notebooks
 
 ![screenshot](search_screenshot.png)
 
-To use it, symlink this directory to `~/.ipython/nbextensions/cite2c`, and add to your custom.js:
-
-```javascript
-IPython.load_extensions('cite2c/main');
-```
+To install this, run `python install.py` with the same Python that IPython is
+installed in.
 
 You will see two new toolbar buttons: ![toolbar buttons](toolbar_buttons.png).
 The left one inserts a citation at the current point in a Markdown cell.
