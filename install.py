@@ -4,7 +4,7 @@ from IPython.html.services.config import ConfigManager
 
 print("Installing nbextension ...")
 c2cdir = pjoin(dirname(abspath(__file__)), 'cite2c')
-install_nbextension([c2cdir])
+install_nbextension(c2cdir, user=True)
 
 print("Enabling the extension ...")
 cm = ConfigManager()
