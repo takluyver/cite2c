@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from os.path import dirname, abspath, join as pjoin
 from IPython.html.nbextensions import install_nbextension
 from IPython.html.services.config import ConfigManager
