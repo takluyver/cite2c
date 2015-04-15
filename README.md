@@ -3,9 +3,7 @@ Live citations in IPython notebooks
 ![screenshot](search_screenshot.png)
 
 To install this, run `python install.py` with the same Python that IPython is
-installed in. It requires IPython 3.x, which is not yet released - you can
-[install a development version](https://github.com/ipython/ipython/#development-installation)
-from GitHub.
+installed in. It requires [IPython 3.x](https://pypi.python.org/pypi/ipython).
 
 You will see two new toolbar buttons: ![toolbar buttons](toolbar_buttons.png).
 The left one inserts a citation at the current point in a Markdown cell.
