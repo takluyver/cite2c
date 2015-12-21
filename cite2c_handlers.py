@@ -1,7 +1,7 @@
 import glob
 import json
 import os
-from IPython.html.utils import url_path_join as ujoin
+from notebook.utils import url_path_join as ujoin
 from tornado.web import StaticFileHandler, RequestHandler
 
 def find_zotero_styles_dir():

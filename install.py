@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from os.path import dirname, abspath, join as pjoin
-from IPython.html.nbextensions import install_nbextension
-from IPython.html.services.config import ConfigManager
+from notebook.nbextensions import install_nbextension
+from notebook.services.config import ConfigManager
 
 print("Installing nbextension ...")
 c2cdir = pjoin(dirname(abspath(__file__)), 'cite2c')
