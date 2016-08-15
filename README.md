@@ -2,8 +2,12 @@ Live citations in IPython notebooks
 
 ![screenshot](search_screenshot.png)
 
-To install this, run `python install.py` with the same Python that IPython is
-installed in. It requires [IPython 3.x](https://pypi.python.org/pypi/ipython).
+To install this:
+
+    pip install cite2c
+    python -m cite2c.install
+
+It requires Jupyter Notebook 4.2 or above.
 
 You will see two new toolbar buttons: ![toolbar buttons](toolbar_buttons.png).
 The left one inserts a citation at the current point in a Markdown cell.
