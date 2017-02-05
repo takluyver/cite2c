@@ -24,6 +24,14 @@ define(['jquery',
        ],
 function($, dialog, utils, configmod, rendering) {
     "use strict";
+
+    // There are two different jQuery typeahead plugins. This code uses one,
+    // and the command palette uses the other. They both add the .typeahead()
+    // method to jQuery objects. .noConflict() replaces the twitter .typeahead()
+    // method we loaded with the jquery-typeahead one the command palette needs.
+    // Then we reattach ours as .twitter_typeahead() so we can use it below.
+    // Namespaces, anyone?
+    $.fn.twitter_typeahead = $.fn.typeahead.noConflict();
     
     var make_author_string = function(authors) {
         // Make a simple string of the author surnames, to show in the
@@ -199,7 +207,7 @@ function($, dialog, utils, configmod, rendering) {
 
         get_zot_bh_engine().then(function(zot_bh_engine) {
             // Set up typeahead.js to search Zotero
-            entry_box.typeahead({
+            entry_box.twitter_typeahead({
               minLength: 3,
               hint: false,
               highlight: true,
