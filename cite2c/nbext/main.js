@@ -275,26 +275,31 @@ function($, dialog, utils, configmod, rendering) {
     
     var toolbar_buttons = function () {
         // Add toolbar buttons to insert citations and bibliographies
-        if (!IPython.toolbar) {
-            $([IPython.events]).on("app_initialized.NotebookApp", citn_button);
+        if (!Jupyter.toolbar) {
+            $([Jupyter.events]).on("app_initialized.NotebookApp", toolbar_buttons);
             return;
         }
-        if ($("#toc_button").length === 0) {
-            IPython.toolbar.add_buttons_group([
-                {
-                  'label' : 'Insert citation',
-                  'icon' : 'fa-mortar-board',
-                  'callback': insert_citn,
-                  'id' : 'insert_citn_button'
-                },
-                {
-                  label: 'Insert bibliography',
-                  icon: 'fa-list',
-                  callback: insert_biblio,
-                  id: 'insert_biblio_button'
-                }
-            ]);
-        }
+
+        Jupyter.actions.register({
+            icon: 'fa-mortar-board',
+            help: 'Insert a citation',
+            help_index: 'za',
+            handler: insert_citn
+        }, 'insert-citation', 'cite2c');
+        Jupyter.actions.register({
+            icon: 'fa-list',
+            help: 'Insert bibliography',
+            help_index: 'zb',
+            handler: insert_biblio,
+        }, 'insert-biblio', 'cite2c');
+
+        Jupyter.toolbar.add_buttons_group([
+            {
+              'label' : 'Cite',
+              'action' : 'cite2c:insert-citation'
+            },
+            'cite2c:insert-biblio'
+        ], 'cite2c-buttons');
     };
 
     function load_ipython_extension() {
