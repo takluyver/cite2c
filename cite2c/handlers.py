@@ -4,6 +4,8 @@ import os
 from notebook.utils import url_path_join as ujoin
 from tornado.web import StaticFileHandler, RequestHandler
 
+from . import zotero_oauth
+
 def find_zotero_styles_dir():
     pattern = os.path.expanduser('~/.zotero/zotero/*/zotero/styles/')
     candidates = glob.glob(pattern)
@@ -35,4 +37,4 @@ def load_jupyter_server_extension(nbapp):
             {'path': zsd}),
         (ujoin(base_url, r"/cite2c/styles/(.+)"), StaticFileHandler, 
             {'path': zsd}),
-    ])
+    ] + zotero_oauth.handlers(base_url))

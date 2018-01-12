@@ -85,25 +85,25 @@ function($, dialog, utils, configmod, rendering) {
                                     {base_url: utils.get_body_data("baseUrl")});
     config.load();
     
-    function get_zotero_user_id() {
+    function get_zotero_access() {
         // Get the Zotero user ID, either from config, or by prompting the user
         // with a dialog. Returns a promise which resolves to the user ID.
         return config.loaded.then(function() {
-            var zid = (config.data.zotero || {}).user_id;
-            if (zid) {
-                return zid;
+            var zotero = (config.data.zotero || {});
+            if (zotero.user_id && zotero.access_token) {
+                return zotero;
             }
-            
-            var entry_box = $('<input type="text"/>');
-            var dialog_body = $("<div/>").append("<p>Please enter your Zotero userID. " +
-                "This is not your username; you can find it by going to " +
-                '<a href="https://www.zotero.org/settings/keys" target="_blank">this page</a> ' +
-                "and logging into Zotero. You will only need to do this once.")
-                .append("<br/>")
-                .append($("<form/>").append("userID: ").append(entry_box));
+
+            var dialog_body = $("<div/>").append(
+                "<p>Opened a new tab to authenticate with Zotero. " +
+                "Once you have done this, please click OK.</p>");
+
+            // Open a new tab for the user to authorize cite2c on Zotero.
+            window.open(utils.url_path_join(utils.get_body_data("baseUrl"),
+                'cite2c/zotero_oauth'));
             
             return new Promise(function(resolve, reject) {
-                var zuid;
+                var clicked_ok = false;
                 dialog.modal({
                     notebook: IPython.notebook,
                     keyboard_manager: IPython.keyboard_manager,
@@ -115,15 +115,14 @@ function($, dialog, utils, configmod, rendering) {
                             that.find('.btn-primary').first().click();
                             return false;
                         });
-                        entry_box.focus();
                     },
                     buttons : {
                         "Cancel" : {
-                            click : function() { reject("Dialog cancelled"); },
+                            click : function() { reject("Dialog cancelled"); }
                         },
                         "OK" : {
                             class : "btn-primary",
-                            click : function() { zuid = entry_box.val(); }
+                            click: function() { clicked_ok = true; }
                         }
                     }
                 }).on("hidden.bs.modal", function () {
@@ -133,10 +132,12 @@ function($, dialog, utils, configmod, rendering) {
                     // leads to the shortcuts being active while the second
                     // dialog is open. Waiting for this hidden event and doing
                     // setTimeout should be enough to avoid the race.
-                    if (zuid) {
-                        setTimeout(function() {
-                            config.update({zotero: {user_id: zuid}});
-                            resolve(zuid);
+                    if (clicked_ok) {
+                        setTimeout(function () {
+                            config.load().then(function (data) {
+                                resolve(data.zotero);
+                                console.log("Authenticated Zotero user ID " + data.zotero.user_id);
+                            });
                         }, 0);
                     }
                 });
@@ -159,7 +160,7 @@ function($, dialog, utils, configmod, rendering) {
             });
         }
         
-        return get_zotero_user_id().then(function(user_id) {
+        return get_zotero_access().then(function(zotero_info) {
             zot_bh_engine = new Bloodhound({
                 name: 'zotero',
                 datumTokenizer: csl_tokenize,
@@ -168,11 +169,14 @@ function($, dialog, utils, configmod, rendering) {
                 dupDetector: function(remoteMatch, localMatch) { return remoteMatch.id === localMatch.id; },
                 local: get_metadata_items,
                 remote: {
-                    url: "https://api.zotero.org/users/"+user_id+"/items?v=3&limit=10&format=csljson&q=%QUERY",
+                    url: "https://api.zotero.org/users/"+zotero_info.user_id+"/items?v=3&limit=10&format=csljson&q=%QUERY",
                     filter: function(result) { return result.items; },
                     ajax: {
                         accepts: "application/vnd.citationstyles.csl+json",
-                        dataType: "json"
+                        dataType: "json",
+                        headers: {
+                            "Zotero-API-Key": zotero_info.access_token
+                        }
                     }
                 }
             });
