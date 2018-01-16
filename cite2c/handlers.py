@@ -25,16 +25,18 @@ class ListStylesHandler(RequestHandler):
         self.finish(json.dumps(files))
 
 def load_jupyter_server_extension(nbapp):
-    zsd = find_zotero_styles_dir()
-    if not zsd:
-        nbapp.log.warning('Could not find Zotero citation styles directory.')
-        return
-
     webapp = nbapp.web_app
     base_url = webapp.settings['base_url']
-    webapp.add_handlers(".*$", [
-        (ujoin(base_url, r"/cite2c/styles/?"), ListStylesHandler, 
-            {'path': zsd}),
-        (ujoin(base_url, r"/cite2c/styles/(.+)"), StaticFileHandler, 
-            {'path': zsd}),
-    ] + zotero_oauth.handlers(base_url))
+
+    zsd = find_zotero_styles_dir()
+    if zsd:
+        webapp.add_handlers(".*$", [
+            (ujoin(base_url, r"/cite2c/styles/?"), ListStylesHandler,
+             {'path': zsd}),
+            (ujoin(base_url, r"/cite2c/styles/(.+)"), StaticFileHandler,
+             {'path': zsd}),
+        ])
+    else:
+        nbapp.log.warning('Could not find Zotero citation styles directory.')
+
+    webapp.add_handlers(".*$", zotero_oauth.handlers(base_url))
