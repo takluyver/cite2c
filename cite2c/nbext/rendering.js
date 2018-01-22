@@ -121,8 +121,8 @@ function($, utils, CSL) {
     function init_rendering() {
         // Create a CSL engine, hook it up to the MarkdownCell rendered event,
         // and process all citations already in the document.
-	var base_url = utils.get_body_data("baseUrl");
-        $.ajax(base_url + "nbextensions/cite2c/chicago-author-date.csl", {
+        $.ajax(utils.url_path_join(utils.get_body_data("baseUrl"),
+				   'nbextensions/cite2c/chicago-author-date.csl'), {
             dataType: "text",
             success: function(styleAsText, textStatus, jqXHR) {
                 citeproc = new CSL.Engine(cpSys, styleAsText);

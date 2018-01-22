@@ -309,12 +309,12 @@ function($, dialog, utils, configmod, rendering) {
     function load_ipython_extension() {
         toolbar_buttons();
         rendering.init_rendering();
-	var base_url = utils.get_body_data("baseUrl");
 	$('head').append(
 	    $('<link>')
 		.attr('rel','stylesheet')
 		.attr('type','text/css')
-		.attr('href', base_url + 'nbextensions/cite2c/styles.css')
+		.attr('href', utils.url_path_join(utils.get_body_data("baseUrl"),
+						  'nbextensions/cite2c/styles.css'))
 	);
     }
 
