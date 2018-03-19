@@ -6,10 +6,11 @@ To install this:
 
     pip install cite2c
     python -m cite2c.install
+    (Start/Restart the Notebook server)
 
 It requires Jupyter Notebook 4.2 or above.
 
-You will see two new toolbar buttons: ![toolbar buttons](toolbar_buttons.png).
+After (re)starting the notebook server, you will see two new toolbar buttons: ![toolbar buttons](toolbar_buttons.png).
 The left one inserts a citation at the current point in a Markdown cell.
 The right one inserts a bibliography.
 
