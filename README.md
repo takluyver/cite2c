@@ -4,8 +4,8 @@ Live citations in IPython notebooks
 
 To install this:
 
-    pip install cite2c
-    python -m cite2c.install
+    python3 -m pip install cite2c
+    python3 -m cite2c.install
     (Start/Restart the Notebook server)
 
 It requires Jupyter Notebook 4.2 or above.
